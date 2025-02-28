@@ -44,7 +44,7 @@ for n_kfold in range(n_kfolds):
         opt = Optimizer(model, sampler.train_data, sampler.test_data, sampler.test_mask, sampler.train_mask,
                         roc_auc, lr=args.lr, wd=args.wd, epochs=args.epochs, device=args.device).to(args.device)
         true_data, predict_data = opt()
-        true_datas = true_datas.append(translate_result(true_data))
-        predict_datas = predict_datas.append(translate_result(predict_data))
+        true_datas = pd.concat([true_datas, translate_result(true_data)], ignore_index=True)
+        predict_datas = pd.concat([predict_datas, translate_result(predict_data)], ignore_index=True)
 pd.DataFrame(true_datas).to_csv("./result_data/true_data.csv")
 pd.DataFrame(predict_datas).to_csv("./result_data/predict_data.csv")
