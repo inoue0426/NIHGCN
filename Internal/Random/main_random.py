@@ -1,14 +1,17 @@
 # coding: utf-8
 import argparse
+from sklearn.model_selection import KFold
+
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 from load_data import load_data
 from model import nihgcn, Optimizer
-from sklearn.model_selection import KFold
 from sampler import RandomSampler
 from myutils import *
 
-
 parser = argparse.ArgumentParser(description="Run NIHGCN")
-parser.add_argument('-device', type=str, default="cuda:0", help='cuda:number or cpu')
+parser.add_argument('-device', type=str, default="cpu", help='cuda:number or cpu')
 parser.add_argument('-data', type=str, default='gdsc', help='Dataset{gdsc or ccle}')
 parser.add_argument('--lr', type=float,default=0.001,
                     help="the learning rate")
@@ -45,4 +48,3 @@ for n_kfold in range(n_kfolds):
         predict_datas = predict_datas.append(translate_result(predict_data))
 pd.DataFrame(true_datas).to_csv("./result_data/true_data.csv")
 pd.DataFrame(predict_datas).to_csv("./result_data/predict_data.csv")
-
