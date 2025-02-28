@@ -1,26 +1,28 @@
 # coding: utf-8
 import argparse
-from load_data import load_data
-from model import nihgcn, Optimizer
+
 from sklearn.model_selection import KFold
-from sampler import TargetSampler
+
+from load_data import load_data
+from model import Optimizer, nihgcn
 from myutils import *
+from sampler import TargetSampler
 
 parser = argparse.ArgumentParser(description="Run NIHGCN")
-parser.add_argument('-device', type=str, default="cuda:0", help='cuda:number or cpu')
-parser.add_argument('-data', type=str, default='gdsc', help='Dataset{gdsc or ccle}')
-parser.add_argument('--lr', type=float,default=0.001,
-                    help="the learning rate")
-parser.add_argument('--wd', type=float,default=1e-5,
-                    help="the weight decay for l2 normalizaton")
-parser.add_argument('--layer_size', nargs='?', default=[1024,1024],
-                    help='Output sizes of every layer')
-parser.add_argument('--alpha', type=float,default=0.25,
-                    help="the scale for balance gcn and ni")
-parser.add_argument('--gamma', type=float,default=8,
-                    help="the scale for sigmod")
-parser.add_argument('--epochs', type=float,default=1000,
-                    help="the epochs for model")
+parser.add_argument("-device", type=str, default="cuda:0", help="cuda:number or cpu")
+parser.add_argument("-data", type=str, default="gdsc", help="Dataset{gdsc or ccle}")
+parser.add_argument("--lr", type=float, default=0.001, help="the learning rate")
+parser.add_argument(
+    "--wd", type=float, default=1e-5, help="the weight decay for l2 normalizaton"
+)
+parser.add_argument(
+    "--layer_size", nargs="?", default=[1024, 1024], help="Output sizes of every layer"
+)
+parser.add_argument(
+    "--alpha", type=float, default=0.25, help="the scale for balance gcn and ni"
+)
+parser.add_argument("--gamma", type=float, default=8, help="the scale for sigmod")
+parser.add_argument("--epochs", type=float, default=1000, help="the epochs for model")
 args = parser.parse_args()
 
 if args.data == "gdsc":
@@ -45,7 +47,7 @@ elif args.data == "ccle":
     target_pos_num = sp.coo_matrix(cell_target_drug).data.shape[0]
     target_indexes = common_data_index(drug_cids, target_drug_cids)
 
-#load data
+# load data
 res, drug_finger, exprs, null_mask, pos_num, args = load_data(args)
 
 
@@ -57,12 +59,34 @@ n_kfolds = 5
 for fold in range(n_kfolds):
     kfold = KFold(n_splits=k, shuffle=True, random_state=fold)
     for train_index, test_index in kfold.split(np.arange(target_pos_num)):
-        sampler = TargetSampler(response_mat=res, null_mask=null_mask, target_indexes=target_indexes,
-                          pos_train_index=train_index, pos_test_index=test_index)
-        model = nihgcn(adj_mat=sampler.train_data, cell_exprs=exprs, drug_finger=drug_finger,
-                       layer_size=args.layer_size, alpha=args.alpha, gamma=args.gamma,  device=args.device)
-        opt = Optimizer(model, sampler.train_data, sampler.test_data, sampler.test_mask, sampler.train_mask,
-                        roc_auc, lr=args.lr, wd=args.wd, epochs=args.epochs, device=args.device).to(args.device)
+        sampler = TargetSampler(
+            response_mat=res,
+            null_mask=null_mask,
+            target_indexes=target_indexes,
+            pos_train_index=train_index,
+            pos_test_index=test_index,
+        )
+        model = nihgcn(
+            adj_mat=sampler.train_data,
+            cell_exprs=exprs,
+            drug_finger=drug_finger,
+            layer_size=args.layer_size,
+            alpha=args.alpha,
+            gamma=args.gamma,
+            device=args.device,
+        )
+        opt = Optimizer(
+            model,
+            sampler.train_data,
+            sampler.test_data,
+            sampler.test_mask,
+            sampler.train_mask,
+            roc_auc,
+            lr=args.lr,
+            wd=args.wd,
+            epochs=args.epochs,
+            device=args.device,
+        ).to(args.device)
         true_data, predict_data = opt()
         true_datas = true_datas.append(translate_result(true_data))
         predict_datas = predict_datas.append(translate_result(predict_data))
